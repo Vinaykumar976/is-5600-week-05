@@ -1,5 +1,6 @@
 const path = require('path')
 const Products = require('./products')
+const Orders = require('./orders')
 const autoCatch = require('./lib/auto-catch')
 
 /**
@@ -50,8 +51,8 @@ async function getProduct(req, res, next) {
  * @param {object} res 
  */
 async function createProduct(req, res) {
-  console.log('request body:', req.body)
-  res.json(req.body)
+  const product = await Products.create(req.body)
+  res.json(product)
 }
 
 /**
@@ -60,19 +61,73 @@ async function createProduct(req, res) {
  * @param {object} res
  * @param {function} next
  */
-async function editProduct(req, res, next) {
-  console.log(req.body)
-  res.json(req.body)
+
+async function edit (_id, change) {
+  const product = await get(_id)
+
+  // todo can we use spread operators here?
+  Object.keys(change).forEach(function (key) {
+    product[key] = change[key]
+  })
+  
+  await product.save()
+
+  return product
 }
 
 /**
  * Delete a product
- * @param {*} req 
- * @param {*} res 
- * @param {*} next 
+ * @param {String} _id
+ * @returns {Promise<Object>}
  */
-async function deleteProduct(req, res, next) {
-  res.json({ success: true })
+async function destroy (_id) {
+  return await Product.deleteOne({_id})
+}
+async function createOrder (req, res, next) {
+  const order = await Orders.create(req.body)
+  res.json(orders)
+}
+
+/**
+ * List orders
+ * @param {Request} req
+ * @param {Response} res
+ * @param {NextFunction} next
+ */
+async function listOrders (req, res, next) {
+  const { offset = 0, limit = 25, productId, status } = req.query
+
+  const orders = await Orders.list({ 
+    offset: Number(offset), 
+    limit: Number(limit),
+    productId, 
+    status 
+  })
+
+  res.json(orders)
+}
+async function editOrder(req, res, next) {
+  try {
+    const order = await Orders.edit(req.params.id, req.body)
+    res.json(order)
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Delete an order
+ * @param {object} req
+ * @param {object} res
+ * @param {function} next
+ */
+async function deleteOrder(req, res, next) {
+  try {
+    await Orders.destroy(req.params.id)
+    res.status(204).send() // No content
+  } catch (err) {
+    next(err)
+  }
 }
 
 module.exports = autoCatch({
@@ -81,5 +136,9 @@ module.exports = autoCatch({
   getProduct,
   createProduct,
   editProduct,
-  deleteProduct
+  deleteProduct,
+  listOrders,
+  createOrder,
+  editOrder,
+  deleteOrder
 });
